@@ -3,13 +3,19 @@ import { redirect } from "next/navigation";
 import { LoginCard } from "@/components/auth/LoginCard";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_STATUS, getDashboardPathForRole, getUserAccount } from "@/lib/auth/account";
+import { getSafeNextPath } from "@/lib/auth/safe-next";
 
 export const metadata: Metadata = {
   title: "ログイン | ENGINEER MATCH",
   description: "ENGINEER MATCHにログインして、続きから始めましょう。",
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const nextPath = getSafeNextPath((await searchParams).next);
   // Server-side check: an already-authenticated user opening /login is sent
   // straight to their dashboard. getUser() (not getSession()) revalidates
   // against Supabase Auth rather than trusting the cookie as-is.
@@ -32,7 +38,7 @@ export default async function LoginPage() {
     if (account.status === ACTIVE_STATUS) {
       const dashboardPath = getDashboardPathForRole(account.role);
       if (dashboardPath) {
-        redirect(dashboardPath);
+        redirect(nextPath ?? dashboardPath);
       }
       // No dashboard for this role yet (e.g. INSTRUCTOR) — fall through and
       // render the login page rather than redirecting nowhere.
@@ -41,5 +47,5 @@ export default async function LoginPage() {
     // Falls through to render the login form normally.
   }
 
-  return <LoginCard />;
+  return <LoginCard nextPath={nextPath ?? undefined} />;
 }
