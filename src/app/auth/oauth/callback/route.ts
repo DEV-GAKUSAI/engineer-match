@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_STATUS, getDashboardPathForRole, getUserAccount } from "@/lib/auth/account";
+import { getSafeNextPath } from "@/lib/auth/safe-next";
 
 /**
  * OAuth (Google / GitHub) PKCE callback. Deliberately a separate route from
@@ -21,9 +22,12 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const providerError = searchParams.get("error");
+  const nextPath = getSafeNextPath(searchParams.get("next"));
 
   function toLogin(oauthError: string) {
-    return NextResponse.redirect(`${origin}/login?oauthError=${oauthError}`);
+    const params = new URLSearchParams({ oauthError });
+    if (nextPath) params.set("next", nextPath);
+    return NextResponse.redirect(`${origin}/login?${params.toString()}`);
   }
 
   if (providerError) {
@@ -74,5 +78,5 @@ export async function GET(request: NextRequest) {
     return toLogin("unsupported_role");
   }
 
-  return NextResponse.redirect(`${origin}${dashboardPath}`);
+  return NextResponse.redirect(`${origin}${nextPath ?? dashboardPath}`);
 }

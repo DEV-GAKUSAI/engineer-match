@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Briefcase, ClipboardList, Loader2 } from "lucide-react";
+import { Briefcase, ClipboardList, Loader2, X } from "lucide-react";
 import { ProfileSection } from "@/components/engineer/profile/ProfileSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,7 @@ import {
   JOB_STATUS_OPTIONS,
   WORK_STYLE_OPTIONS,
 } from "@/constants/company-jobs";
+import { OPPORTUNITY_TARGET_ROLE_OPTIONS } from "@/constants/opportunity-matching";
 
 const SELECT_CLASS =
   "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -65,6 +66,8 @@ export interface JobFormState {
    */
   hourlyWorkStyle: string;
   requiredSkillIds: string[];
+  targetRoleCode: string;
+  preferredSkillIds: string[];
   /** Review #27: free-text supplement for skills absent from the public.skills master. */
   customRequiredSkillsNote: string;
 }
@@ -91,11 +94,13 @@ export function buildInitialFormState(detail?: OpportunityDetail | null): JobFor
       hourlyIsOnline: "true",
       hourlyWorkStyle: "REMOTE",
       requiredSkillIds: [],
+      targetRoleCode: "",
+      preferredSkillIds: [],
       customRequiredSkillsNote: "",
     };
   }
 
-  const { opportunity, employment, project, hourly, requiredSkillIds } = detail;
+  const { opportunity, employment, project, hourly, requiredSkillIds, preferredSkillIds } = detail;
 
   return {
     title: opportunity.title,
@@ -121,6 +126,8 @@ export function buildInitialFormState(detail?: OpportunityDetail | null): JobFor
     hourlyIsOnline: hourly ? String(hourly.is_online) : "true",
     hourlyWorkStyle: hourly?.work_style ?? "",
     requiredSkillIds,
+    targetRoleCode: opportunity.target_role_code ?? "",
+    preferredSkillIds,
     customRequiredSkillsNote: opportunity.custom_required_skills_note ?? "",
   };
 }
@@ -134,6 +141,11 @@ export function validateJobForm(state: JobFormState): string | null {
 
   if (state.requiredSkillIds.length < 1) return JOB_FORM_ERRORS.requiredSkillsMinimum;
   if (state.requiredSkillIds.length > 10) return JOB_FORM_ERRORS.requiredSkillsMaximum;
+  if (!state.targetRoleCode) return JOB_FORM_ERRORS.targetRoleRequired;
+  if (state.preferredSkillIds.length > 10) return JOB_FORM_ERRORS.preferredSkillsMaximum;
+  if (state.preferredSkillIds.some((skillId) => state.requiredSkillIds.includes(skillId))) {
+    return JOB_FORM_ERRORS.matchingSkillsOverlap;
+  }
   if (state.customRequiredSkillsNote.length > 500) {
     return JOB_FORM_ERRORS.customRequiredSkillsNoteTooLong;
   }
@@ -225,6 +237,8 @@ export function buildOpportunityInput(state: JobFormState): OpportunityInput {
           }
         : null,
     requiredSkillIds: state.requiredSkillIds,
+    targetRoleCode: state.targetRoleCode,
+    preferredSkillIds: state.preferredSkillIds,
     customRequiredSkillsNote: state.customRequiredSkillsNote.trim() || null,
   };
 }
@@ -234,6 +248,9 @@ interface RequiredSkillsPickerProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   idPrefix: string;
+  labels:
+    | typeof JOB_FORM_FIELDS.requiredSkills
+    | typeof JOB_FORM_FIELDS.preferredSkills;
 }
 
 function RequiredSkillsPicker({
@@ -241,10 +258,11 @@ function RequiredSkillsPicker({
   selectedIds,
   onChange,
   idPrefix,
+  labels,
 }: RequiredSkillsPickerProps) {
   const [query, setQuery] = useState("");
   const filtered = skills.filter((skill) =>
-    skill.name.toLowerCase().includes(query.trim().toLowerCase()),
+    !selectedIds.includes(skill.id) && skill.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const atMax = selectedIds.length >= 10;
 
@@ -259,7 +277,7 @@ function RequiredSkillsPicker({
   if (skills.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {JOB_FORM_FIELDS.requiredSkills.emptyMessage}
+        {labels.emptyMessage}
       </p>
     );
   }
@@ -269,8 +287,27 @@ function RequiredSkillsPicker({
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={JOB_FORM_FIELDS.requiredSkills.searchPlaceholder}
+        placeholder={labels.searchPlaceholder}
       />
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap gap-2" aria-label={`${labels.label}の選択済み一覧`}>
+          {selectedIds.map((id) => {
+            const skill = skills.find((item) => item.id === id);
+            if (!skill) return null;
+            return (
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => toggle(skill.id)}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+              >
+                {skill.name}
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="max-h-64 overflow-y-auto rounded-xl border border-border p-3">
         <div className="flex flex-col gap-2.5">
           {filtered.map((skill) => {
@@ -295,7 +332,7 @@ function RequiredSkillsPicker({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        {selectedIds.length}/10{JOB_FORM_FIELDS.requiredSkills.selectedCountSuffix}
+        {selectedIds.length}/10{labels.selectedCountSuffix}
       </p>
     </div>
   );
@@ -405,6 +442,30 @@ export function JobFormFields({
               ))}
             </select>
           </div>
+        </div>
+      </ProfileSection>
+
+      <ProfileSection title={JOB_FORM_SECTION_LABELS.matchingRequirements}>
+        <div className="flex max-w-md flex-col gap-2">
+          <Label htmlFor={`${idPrefix}-target-role`}>
+            {JOB_FORM_FIELDS.targetRole.label}
+            <span className="text-destructive">*</span>
+          </Label>
+          <select
+            id={`${idPrefix}-target-role`}
+            value={state.targetRoleCode}
+            onChange={(event) => onChange({ targetRoleCode: event.target.value })}
+            className={SELECT_CLASS}
+          >
+            <option value="" disabled>
+              {JOB_FORM_FIELDS.targetRole.placeholder}
+            </option>
+            {OPPORTUNITY_TARGET_ROLE_OPTIONS.map((role) => (
+              <option key={role.value} value={role.value}>
+                {role.label}
+              </option>
+            ))}
+          </select>
         </div>
       </ProfileSection>
 
@@ -653,6 +714,7 @@ export function JobFormFields({
           selectedIds={state.requiredSkillIds}
           onChange={(ids) => onChange({ requiredSkillIds: ids })}
           idPrefix={idPrefix}
+          labels={JOB_FORM_FIELDS.requiredSkills}
         />
         <div className="mt-5 flex flex-col gap-2">
           <Label htmlFor={`${idPrefix}-custom-required-skills-note`}>
@@ -675,6 +737,16 @@ export function JobFormFields({
             {state.customRequiredSkillsNote.length} / 500
           </p>
         </div>
+      </ProfileSection>
+
+      <ProfileSection title={JOB_FORM_SECTION_LABELS.preferredSkills}>
+        <RequiredSkillsPicker
+          skills={skills}
+          selectedIds={state.preferredSkillIds}
+          onChange={(ids) => onChange({ preferredSkillIds: ids })}
+          idPrefix={`${idPrefix}-preferred`}
+          labels={JOB_FORM_FIELDS.preferredSkills}
+        />
       </ProfileSection>
     </>
   );

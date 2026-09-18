@@ -24,6 +24,7 @@ export interface Opportunity {
    * opportunity_required_skills -- display-only, no search/filter impact.
    */
   custom_required_skills_note: string | null;
+  target_role_code: string | null;
 }
 
 export type CompanyContractType = "employment" | "project" | "hourly";
@@ -103,6 +104,7 @@ export interface OpportunityDetail {
   project: OpportunityProject | null;
   hourly: OpportunityHourly | null;
   requiredSkillIds: string[];
+  preferredSkillIds: string[];
 }
 
 export interface EmploymentInput {
@@ -145,6 +147,8 @@ export interface OpportunityInput {
   project: ProjectInput | null;
   hourly: HourlyInput | null;
   requiredSkillIds: string[];
+  targetRoleCode: string;
+  preferredSkillIds: string[];
   /** Review #27: optional free text, trimmed; empty/whitespace collapses to null server-side. */
   customRequiredSkillsNote: string | null;
 }
@@ -451,6 +455,10 @@ export async function getCompanyOpportunity(
     .from("opportunity_required_skills")
     .select("skill_id")
     .eq("opportunity_id", id);
+  const { data: preferredSkillRows } = await supabase
+    .from("opportunity_preferred_skills")
+    .select("skill_id")
+    .eq("opportunity_id", id);
 
   return {
     opportunity: opportunity as Opportunity,
@@ -458,6 +466,7 @@ export async function getCompanyOpportunity(
     project,
     hourly,
     requiredSkillIds: (skillRows ?? []).map((row) => row.skill_id as string),
+    preferredSkillIds: (preferredSkillRows ?? []).map((row) => row.skill_id as string),
   };
 }
 
@@ -494,6 +503,9 @@ export function getTodayDateStringJST(): string {
 /** Fast client-side duplicate of the authoritative save RPC validation. */
 function validateOpportunityInput(input: OpportunityInput): boolean {
   if (input.requiredSkillIds.length < 1 || input.requiredSkillIds.length > 10) return false;
+  if (!input.targetRoleCode) return false;
+  if (input.preferredSkillIds.length > 10) return false;
+  if (input.preferredSkillIds.some((skillId) => input.requiredSkillIds.includes(skillId))) return false;
   if (input.description.length > 3000) return false;
   if ((input.customRequiredSkillsNote?.length ?? 0) > 500) return false;
   if (input.contract_type === "project" && input.project) {
@@ -540,7 +552,7 @@ async function saveCompanyOpportunity(
     return { data: null, error: null, stage: "invalid_input" as OpportunitySaveStage };
   }
 
-  const { data, error } = await supabase.rpc("save_company_opportunity", {
+  const { data, error } = await supabase.rpc("save_company_opportunity_with_matching", {
     p_opportunity_id: opportunityId,
     p_title: input.title,
     p_description: input.description,
@@ -549,6 +561,8 @@ async function saveCompanyOpportunity(
     p_subtype: getSubtypePayload(input),
     p_required_skill_ids: input.requiredSkillIds,
     p_custom_required_skills_note: input.customRequiredSkillsNote,
+    p_target_role_code: input.targetRoleCode,
+    p_preferred_skill_ids: input.preferredSkillIds,
   });
 
   if (error) {

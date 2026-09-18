@@ -30,7 +30,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   failed: LOGIN_ERRORS.oauthFailed,
 };
 
-export function LoginCard() {
+export function LoginCard({ nextPath }: { nextPath?: string }) {
   const prefersReducedMotion = useReducedMotion();
   const variants = fadeUpItem(prefersReducedMotion, { duration: 0.5 });
   const router = useRouter();
@@ -73,7 +73,9 @@ export function LoginCard() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/oauth/callback`,
+          redirectTo: `${window.location.origin}/auth/oauth/callback${
+            nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""
+          }`,
         },
       });
 
@@ -167,7 +169,7 @@ export function LoginCard() {
         return;
       }
 
-      router.push(dashboardPath);
+      router.push(nextPath ?? dashboardPath);
       router.refresh();
     } catch (err) {
       console.error("[login] unexpected error:", err);

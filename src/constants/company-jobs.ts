@@ -129,10 +129,12 @@ export const JOB_DETAIL_META = {
 
 export const JOB_FORM_SECTION_LABELS = {
   basicInfo: "基本情報",
+  matchingRequirements: "マッチング条件",
   employmentDetails: "就職条件",
   projectDetails: "案件条件",
   hourlyDetails: "時間精算条件",
   requiredSkills: "必須スキル",
+  preferredSkills: "歓迎スキル",
 } as const;
 
 export const JOB_FORM_FIELDS = {
@@ -144,6 +146,7 @@ export const JOB_FORM_FIELDS = {
   contractType: { label: "契約形態" },
   contractTypeLockedNote: "契約形態は作成後に変更できません。",
   status: { label: "公開ステータス" },
+  targetRole: { label: "募集ロール", placeholder: "選択してください" },
   workStyle: { label: "勤務形態" },
   workStylePlaceholder: "選択してください",
   salaryMin: { label: "年収下限（万円）" },
@@ -162,6 +165,12 @@ export const JOB_FORM_FIELDS = {
   hourlyRate: { label: "時給（円）" },
   requiredSkills: {
     label: "必須スキル",
+    searchPlaceholder: "スキル名で検索",
+    emptyMessage: "登録されているスキルがありません。",
+    selectedCountSuffix: "件選択中",
+  },
+  preferredSkills: {
+    label: "歓迎スキル",
     searchPlaceholder: "スキル名で検索",
     emptyMessage: "登録されているスキルがありません。",
     selectedCountSuffix: "件選択中",
@@ -200,6 +209,9 @@ export const JOB_FORM_ERRORS = {
   descriptionTooLong: "仕事内容は3000文字以内で入力してください。",
   requiredSkillsMinimum: "必須スキルを1件以上選択してください。",
   requiredSkillsMaximum: "必須スキルは10件まで選択できます。",
+  targetRoleRequired: "募集ロールを選択してください。",
+  preferredSkillsMaximum: "歓迎スキルは10件まで選択できます。",
+  matchingSkillsOverlap: "同じスキルを必須スキルと歓迎スキルの両方に選択することはできません。",
   customRequiredSkillsNoteTooLong: "その他の必須スキルは500文字以内で入力してください。",
   workStyleRequired: "勤務形態を選択してください。",
   salaryRequired: "年収の下限・上限を入力してください。",
