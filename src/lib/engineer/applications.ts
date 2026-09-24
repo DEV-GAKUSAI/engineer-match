@@ -188,6 +188,19 @@ export async function applyToOpportunity(
     .single();
 }
 
+/**
+ * Starts a short-lived Mine consent request for the current linked Engineer
+ * Match account. This does not create an application yet; Mine creates the
+ * application only after the user chooses which documents to share.
+ */
+export async function createMineApplicationShareRequest(
+  supabase: SupabaseClient,
+  opportunityId: string,
+) {
+  return supabase.rpc("create_mine_engineer_application_share_token", {
+    p_opportunity_id: opportunityId,
+  });
+}
 export interface WithdrawApplicationResult {
   data: Application | null;
   error: { message: string } | null;

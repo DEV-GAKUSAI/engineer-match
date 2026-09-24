@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bookmark, CheckCircle2 } from "lucide-react";
 import { APPLY_SIDEBAR_LABELS, CONTRACT_TYPE_BADGE_STYLES, CONTRACT_TYPE_LABEL } from "@/constants/jobs";
-import { applyToOpportunity } from "@/lib/engineer/applications";
+import { createMineApplicationShareRequest } from "@/lib/engineer/applications";
 import { addFavorite, removeFavorite } from "@/lib/engineer/favorites";
 import { createClient } from "@/lib/supabase/client";
 import type { CompanyContractType } from "@/lib/engineer/opportunities";
@@ -48,26 +48,34 @@ export function ApplySidebar({
     setIsApplying(true);
     setMessage(null);
 
-    const supabase = createClient();
-    const { error } = await applyToOpportunity(supabase, userId, opportunityId);
+    try {
+      const supabase = createClient();
+      const { data: token, error } = await createMineApplicationShareRequest(supabase, opportunityId);
 
-    setIsApplying(false);
-
-    if (error) {
-      if (error.code === "23505") {
-        setHasApplied(true);
-        setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.duplicateApplicationMessage });
+      if (error || !token) {
+        setIsApplying(false);
+        if (error?.code === "42501") {
+          setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.mineLinkRequiredMessage });
+          return;
+        }
+        if (error?.code === "23505") {
+          setHasApplied(true);
+          setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.duplicateApplicationMessage });
+          return;
+        }
+        console.error("[apply-sidebar] Mine consent request failed:", error);
+        setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.mineConsentStartErrorMessage });
         return;
       }
-      console.error("[apply-sidebar] apply failed:", error);
-      setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.applyErrorMessage });
-      return;
+
+      const mineUrl = (process.env.NEXT_PUBLIC_MINE_APP_URL ?? "https://mine-omega-one.vercel.app").replace(/\/$/, "");
+      window.location.assign(`${mineUrl}/apply/engineer-match?token=${encodeURIComponent(token)}`);
+    } catch {
+      setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.mineConsentStartErrorMessage });
+    } finally {
+      setIsApplying(false);
     }
-
-    setHasApplied(true);
-    setMessage({ tone: "success", text: APPLY_SIDEBAR_LABELS.appliedMessage });
   }
-
   async function handleToggleFavorite() {
     if (!isSignedIn || !userId) {
       setMessage({ tone: "error", text: APPLY_SIDEBAR_LABELS.signInRequiredMessage });
