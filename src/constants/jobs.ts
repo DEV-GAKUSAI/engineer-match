@@ -141,12 +141,14 @@ export const JOB_NOT_FOUND_LABELS = {
 
 export const APPLY_SIDEBAR_LABELS = {
   applyLabel: "応募する",
-  applying: "応募処理中…",
+  applying: "Mineを開いています…",
   alreadyAppliedLabel: "応募済み",
   favoriteLabel: "お気に入り",
   favoritedLabel: "お気に入り済み",
   updatedLabel: "更新日",
   appliedMessage: "応募を受け付けました。",
+  mineLinkRequiredMessage: "応募するには、Mineアカウントの連携が必要です。Mineのサービス画面からEngineer Matchを連携してください。",
+  mineConsentStartErrorMessage: "Mineの書類共有画面を開けませんでした。もう一度お試しください。",
   duplicateApplicationMessage: "この求人・案件にはすでに応募済みです。",
   applyErrorMessage: "応募処理に失敗しました。しばらくしてから再度お試しください。",
   favoriteErrorMessage: "お気に入り処理に失敗しました。しばらくしてから再度お試しください。",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MineApplicationDocuments } from "@/components/applications/MineApplicationDocuments";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -102,7 +103,7 @@ export default async function EngineerApplicationDetailPage({
           ctaHref={DETAIL_META.backHref}
         />
       ) : (
-        <ApplicationDetailView detail={detail} />
+        <><ApplicationDetailView detail={detail} /><MineApplicationDocuments applicationId={detail.id} /></>
       )}
     </DashboardShell>
   );

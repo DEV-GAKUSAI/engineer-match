@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MineApplicationDocuments } from "@/components/applications/MineApplicationDocuments";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Briefcase, MessageSquare, Users } from "lucide-react";
@@ -119,6 +120,7 @@ export default async function CompanyApplicantDetailPage({
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
+            <MineApplicationDocuments applicationId={applicant.id} />
             <ApplicantReviewSection
               applicationId={applicant.id}
               opportunityId={applicant.opportunityId}
