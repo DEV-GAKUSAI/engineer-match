@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+
+/**
+ * Mine -> Engineer Match single sign-on.
+ *
+ * consume_mine_engineer_sso_token() (service_role only) consumes the
+ * two-minute, single-use ticket that Mine issued for its signed-in user. If
+ * that Mine account has no Engineer Match link yet, the same call provisions
+ * one (106_mine_engineer_auto_provisioning.sql): the shared account's role
+ * becomes ENGINEER and it is linked to itself, so no second registration or
+ * login form is shown. The engineer id and return path always come from the
+ * ticket row, never from the browser. Any failure -- including a refused
+ * provisioning, which still burns the ticket -- returns no row and falls
+ * back to /login.
+ */
 export async function GET(request: NextRequest) {
   const token = new URL(request.url).searchParams.get("token");
   if (!token) return NextResponse.redirect(new URL("/login", request.url));
